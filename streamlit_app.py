@@ -1,59 +1,67 @@
 import streamlit as st
 from pytube import YouTube
 import os
+import re
 
-def get_video_streams(url):
-    try:
-        yt = YouTube(url)
-        streams = yt.streams.filter(progressive=True, file_extension='mp4')
-        return streams
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
-        return []
+# Fungsi untuk mendapatkan informasi tentang video dari URL
+@st.cache(allow_output_mutation=True)
+def get_info(url):
+    yt = YouTube(url)
+    streams = yt.streams.filter(progressive=True, type='video')
+    details = {
+        "image": yt.thumbnail_url,
+        "streams": streams,
+        "title": yt.title,
+        "length": yt.length,
+        "itag": [stream.itag for stream in streams],
+        "resolutions": [stream.resolution for stream in streams],
+        "fps": [stream.fps for stream in streams],
+        "format": [stream.subtype for stream in streams]
+    }
+    return details
 
-def download_video(stream):
-    try:
-        output_path = stream.download()
-        return output_path, f"Video '{stream.title}' has been successfully downloaded."
-    except Exception as e:
-        return None, f"An error occurred: {str(e)}"
+# Setup folder untuk menyimpan video
+directory = 'downloads/'
+if not os.path.exists(directory):
+    os.makedirs(directory)
 
+# Konfigurasi halaman Streamlit
+st.set_page_config(page_title="YouTube Downloader", page_icon="🚀", layout="wide")
+
+# Fungsi utama
 def main():
-    st.title("YouTube Video Downloader")
-    st.write("Enter the YouTube video URL below and click on the 'Fetch' button to see available qualities.")
-
-    url = st.text_input("YouTube URL")
-
-    if st.button("Fetch"):
-        if url:
-            streams = get_video_streams(url)
-            if streams:
-                quality_options = [f"{stream.resolution} ({stream.filesize // (1024 * 1024)} MB)" for stream in streams]
-                selected_quality = st.selectbox("Select Quality", quality_options)
-                if st.button("Download"):
-                    selected_stream = streams[quality_options.index(selected_quality)]
-                    with st.spinner('Downloading...'):
-                        output_path, message = download_video(selected_stream)
-                    if output_path:
-                        st.success(message)
-                        st.session_state['download_path'] = output_path
-                    else:
-                        st.error(message)
-            else:
-                st.write("No video streams available for this URL.")
-        else:
-            st.write("Please enter a valid YouTube URL.")
-
-    if 'download_path' in st.session_state:
-        with open(st.session_state['download_path'], 'rb') as file:
-            btn = st.download_button(
-                label="Download Video",
-                data=file,
-                file_name=os.path.basename(st.session_state['download_path']),
-                mime='video/mp4'
-            )
-            if btn:
-                st.session_state.pop('download_path', None)  # Clear download path after download
+    st.title("YouTube Downloader 🚀")
+    url = st.text_input("Paste URL here 👇", placeholder='https://www.youtube.com/')
+    
+    if url:
+        v_info = get_info(url)
+        col1, col2 = st.columns([1, 1.5])
+        with st.container():
+            with col1:
+                st.image(v_info["image"])
+            with col2:
+                st.subheader("Video Details ⚙️")
+                res_inp = st.selectbox('__Select Resolution__', v_info["resolutions"])
+                id = v_info["resolutions"].index(res_inp)
+                st.write(f"__Title:__ {v_info['title']}")
+                st.write(f"__Length:__ {v_info['length']} sec")
+                st.write(f"__Resolution:__ {v_info['resolutions'][id]}")
+                st.write(f"__Frame Rate:__ {v_info['fps'][id]}")
+                st.write(f"__Format:__ {v_info['format'][id]}")
+                file_name = st.text_input('__Save as 🎯__', placeholder=v_info['title'] + ".mp4")
+        button = st.button("Download ⚡️")
+        
+        if button:
+            with st.spinner('Downloading...'):
+                try:
+                    selected_stream = v_info["streams"].get_by_itag(v_info['itag'][id])
+                    output_path = os.path.join(directory, file_name)
+                    selected_stream.download(output_path=output_path, filename=file_name)
+                    st.success('Download Complete', icon="✅")
+                    st.markdown(f"[Download Video]({output_path})")  # Tampilkan tautan unduhan
+                    st.balloons()
+                except:
+                    st.error('Error: Save with a different name!', icon="🚨")
 
 if __name__ == "__main__":
     main()
