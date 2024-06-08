@@ -8,14 +8,14 @@ import re
 def get_info(url):
     try:
         yt = YouTube(url)
-        streams = yt.streams.filter(progressive=True, type='video', resolution='720p')
+        streams = yt.streams.filter(progressive=True, type='video')
         details = {
             "image": yt.thumbnail_url,
             "streams": streams,
             "title": yt.title,
             "length": yt.length,
+            "available_resolutions": sorted(set([stream.resolution for stream in streams])),
             "itag": [stream.itag for stream in streams],
-            "resolutions": [stream.resolution for stream in streams],
             "fps": [stream.fps for stream in streams],
             "format": [stream.subtype for stream in streams]
         }
@@ -47,30 +47,29 @@ def main():
                         st.image(v_info["image"])
                     with col2:
                         st.subheader("Video Details ⚙️")
-                        if v_info['resolutions']:
-                            res_inp = st.selectbox('__Select Resolution__', v_info["resolutions"])
-                            id = v_info["resolutions"].index(res_inp)
+                        if v_info["available_resolutions"]:
+                            res_inp = st.selectbox('__Select Resolution__', v_info["available_resolutions"])
+                            id = v_info["available_resolutions"].index(res_inp)
                             st.write(f"__Title:__ {v_info['title']}")
                             st.write(f"__Length:__ {v_info['length']} sec")
-                            st.write(f"__Resolution:__ {v_info['resolutions'][id]}")
+                            st.write(f"__Resolution:__ {v_info['available_resolutions'][id]}")
                             st.write(f"__Frame Rate:__ {v_info['fps'][id]}")
                             st.write(f"__Format:__ {v_info['format'][id]}")
+                            file_name = st.text_input('__Save as 🎯__', placeholder=v_info['title'] + ".mp4")
+                            button = st.button("Download ⚡️")
+                            if button:
+                                with st.spinner('Downloading...'):
+                                    try:
+                                        selected_stream = v_info["streams"].get_by_resolution(v_info["available_resolutions"][id])
+                                        output_path = os.path.join(directory, file_name)
+                                        selected_stream.download(output_path=output_path, filename=file_name)
+                                        st.success('Download Complete', icon="✅")
+                                        st.markdown(f"[Download Video]({output_path})")  # Tampilkan tautan unduhan
+                                        st.balloons()
+                                    except:
+                                        st.error('Error: Save with a different name!', icon="🚨")
                         else:
-                            st.warning("No available streams with resolution up to 720p.")
-                            st.stop()
-                        file_name = st.text_input('__Save as 🎯__', placeholder=v_info['title'] + ".mp4")
-                button = st.button("Download ⚡️")
-                if button:
-                    with st.spinner('Downloading...'):
-                        try:
-                            selected_stream = v_info["streams"].get_by_itag(v_info['itag'][id])
-                            output_path = os.path.join(directory, file_name)
-                            selected_stream.download(output_path=output_path, filename=file_name)
-                            st.success('Download Complete', icon="✅")
-                            st.markdown(f"[Download Video]({output_path})")  # Tampilkan tautan unduhan
-                            st.balloons()
-                        except:
-                            st.error('Error: Save with a different name!', icon="🚨")
+                            st.warning("No available resolutions for this video.")
             else:
                 st.warning("Please enter a valid YouTube URL.")
 
