@@ -2,10 +2,7 @@ import streamlit as st
 from pytube import YouTube
 import os
 import re
-
-directory = 'downloads/'
-if not os.path.exists(directory):
-    os.makedirs(directory)
+import tempfile
 
 st.set_page_config(
     page_title="YTD ", page_icon="🚀", layout="wide",)
@@ -17,6 +14,12 @@ st.markdown(f"""
          </style>
          """, unsafe_allow_html=True)
 
+def download_video(video_url, itag, output_path, filename):
+    yt = YouTube(video_url)
+    stream = yt.streams.get_by_itag(itag)
+    with st.spinner("Downloading... Please wait."):
+        stream.download(output_path=output_path, filename=filename)
+    st.success(f"Download Completed: {filename}")
 
 @st.cache(allow_output_mutation=True)
 def get_info(url):
@@ -43,13 +46,6 @@ def get_info(url):
     details["format"] = vformat
     return details
 
-
-def download_video(video_url, itag, output_path, filename):
-    yt = YouTube(video_url)
-    stream = yt.streams.get_by_itag(itag)
-    stream.download(output_path=output_path, filename=filename)
-
-
 st.title("YouTube Downloader 🚀")
 url = st.text_input("Paste URL here 👇", placeholder='https://www.youtube.com/')
 if url:
@@ -69,14 +65,13 @@ if url:
             st.write(f"__Format:__ {v_info['format'][id]}")
             file_name = st.text_input('__Save as 🎯__', placeholder=v_info['title'])
             if file_name:
-                if file_name != v_info['title']:
-                    file_name += ".mp4"
+                file_name = re.sub(r'[\\/*?:"<>|]', '', file_name) + ".mp4"
             else:
-                file_name = v_info['title'] + ".mp4"
+                file_name = re.sub(r'[\\/*?:"<>|]', '', v_info['title']) + ".mp4"
 
-    download_button = st.download_button(
-        label="Download ⚡️",
-        data=download_video,
-        args=(url, v_info['itag'][id], "downloads/", file_name),
-        file_name=file_name,
-    )
+    if st.button("Download ⚡️"):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            download_video(url, v_info['itag'][id], temp_dir, file_name)
+            with open(os.path.join(temp_dir, file_name), "rb") as f:
+                data = f.read()
+            st.download_button(label="Click to download", data=data, file_name=file_name)
