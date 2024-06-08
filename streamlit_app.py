@@ -1,5 +1,6 @@
 import streamlit as st
 from pytube import YouTube
+import os
 
 def get_video_streams(url):
     try:
@@ -12,10 +13,10 @@ def get_video_streams(url):
 
 def download_video(stream):
     try:
-        stream.download()
-        return f"Video '{stream.title}' has been successfully downloaded."
+        output_path = stream.download()
+        return output_path, f"Video '{stream.title}' has been successfully downloaded."
     except Exception as e:
-        return f"An error occurred: {str(e)}"
+        return None, f"An error occurred: {str(e)}"
 
 def main():
     st.title("YouTube Video Downloader")
@@ -31,8 +32,19 @@ def main():
                 selected_quality = st.selectbox("Select Quality", quality_options)
                 if st.button("Download"):
                     selected_stream = streams[quality_options.index(selected_quality)]
-                    message = download_video(selected_stream)
-                    st.write(message)
+                    with st.spinner('Downloading...'):
+                        output_path, message = download_video(selected_stream)
+                    if output_path:
+                        st.success(message)
+                        with open(output_path, 'rb') as file:
+                            btn = st.download_button(
+                                label="Download Video",
+                                data=file,
+                                file_name=os.path.basename(output_path),
+                                mime='video/mp4'
+                            )
+                    else:
+                        st.error(message)
             else:
                 st.write("No video streams available for this URL.")
         else:
