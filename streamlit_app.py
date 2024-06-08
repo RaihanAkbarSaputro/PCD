@@ -8,7 +8,7 @@ import re
 def get_info(url):
     try:
         yt = YouTube(url)
-        streams = yt.streams.filter(progressive=True, type='video')
+        streams = yt.streams.filter(progressive=True, type='video', resolution='720p')
         details = {
             "image": yt.thumbnail_url,
             "streams": streams,
@@ -37,7 +37,7 @@ def main():
     st.title("YouTube Downloader 🚀")
     url = st.text_input("Paste URL here 👇", key="url_input")
     
-    if st.button("Tekan"):
+    if st.button("Fetch"):
         if url:
             v_info = get_info(url)
             if v_info:
@@ -47,13 +47,17 @@ def main():
                         st.image(v_info["image"])
                     with col2:
                         st.subheader("Video Details ⚙️")
-                        res_inp = st.selectbox('__Select Resolution__', v_info["resolutions"])
-                        id = v_info["resolutions"].index(res_inp)
-                        st.write(f"__Title:__ {v_info['title']}")
-                        st.write(f"__Length:__ {v_info['length']} sec")
-                        st.write(f"__Resolution:__ {v_info['resolutions'][id]}")
-                        st.write(f"__Frame Rate:__ {v_info['fps'][id]}")
-                        st.write(f"__Format:__ {v_info['format'][id]}")
+                        if v_info['resolutions']:
+                            res_inp = st.selectbox('__Select Resolution__', v_info["resolutions"])
+                            id = v_info["resolutions"].index(res_inp)
+                            st.write(f"__Title:__ {v_info['title']}")
+                            st.write(f"__Length:__ {v_info['length']} sec")
+                            st.write(f"__Resolution:__ {v_info['resolutions'][id]}")
+                            st.write(f"__Frame Rate:__ {v_info['fps'][id]}")
+                            st.write(f"__Format:__ {v_info['format'][id]}")
+                        else:
+                            st.warning("No available streams with resolution up to 720p.")
+                            st.stop()
                         file_name = st.text_input('__Save as 🎯__', placeholder=v_info['title'] + ".mp4")
                 button = st.button("Download ⚡️")
                 if button:
