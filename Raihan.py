@@ -1,1 +1,0 @@
-print ("Raihan Akbar Saputro")
