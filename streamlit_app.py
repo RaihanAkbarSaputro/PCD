@@ -36,19 +36,24 @@ def main():
                         output_path, message = download_video(selected_stream)
                     if output_path:
                         st.success(message)
-                        with open(output_path, 'rb') as file:
-                            btn = st.download_button(
-                                label="Download Video",
-                                data=file,
-                                file_name=os.path.basename(output_path),
-                                mime='video/mp4'
-                            )
+                        st.session_state['download_path'] = output_path
                     else:
                         st.error(message)
             else:
                 st.write("No video streams available for this URL.")
         else:
             st.write("Please enter a valid YouTube URL.")
+
+    if 'download_path' in st.session_state:
+        with open(st.session_state['download_path'], 'rb') as file:
+            btn = st.download_button(
+                label="Download Video",
+                data=file,
+                file_name=os.path.basename(st.session_state['download_path']),
+                mime='video/mp4'
+            )
+            if btn:
+                st.session_state.pop('download_path', None)  # Clear download path after download
 
 if __name__ == "__main__":
     main()
