@@ -37,7 +37,7 @@ def main():
     st.title("YouTube Downloader 🚀")
     url = st.text_input("Paste URL here 👇", key="url_input")
     
-    if st.button("Fetch"):
+    if st.button("Tekan"):
         if url:
             v_info = get_info(url)
             if v_info:
